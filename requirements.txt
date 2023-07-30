@@ -12,6 +12,7 @@ aiohttp==3.7.4
 aiofiles
 requests
 pyshorteners
+python-dotenv
 bs4
 imdbpy
 youtube-search-python==1.4.6
