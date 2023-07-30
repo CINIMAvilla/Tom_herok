@@ -50,6 +50,10 @@ REQ_CHANNEL = environ.get("REQ_CHANNEL", '-1001692754340')
 REQ_CHANNEL = int(REQ_CHANNEL) if REQ_CHANNEL and id_pattern.search(REQ_CHANNEL) else False
 JOIN_REQS_DB = environ.get("JOIN_REQS_DB", DATABASE_URI)
 
+# Channel Button Links
+GRP_LNK = environ.get('GRP_LNK', 'https://t.me/c_i_n_i_m_a_v_i_l_l_a')
+CHNL_LNK = environ.get('CHNL_LNK', 'https://telegram.me/CV_Community')
+
 # Others
 LOG_CHANNEL = int(environ.get('LOG_CHANNEL', 0))
 SUPPORT_CHAT = environ.get('SUPPORT_CHAT', 'JOSPSupport')
