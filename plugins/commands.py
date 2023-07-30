@@ -8,7 +8,7 @@ from pyrogram.errors import ChatAdminRequired, FloodWait
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from database.ia_filterdb import Media, get_file_details, unpack_new_file_id
 from database.users_chats_db import db
-from info import CHANNELS, ADMINS, AUTH_CHANNEL, LOG_CHANNEL, PICS, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT, REQ_CHANNEL
+from info import CHANNELS, ADMINS, AUTH_CHANNEL, LOG_CHANNEL, PICS, BATCH_FILE_CAPTION, CUSTOM_FILE_CAPTION, PROTECT_CONTENT, REQ_CHANNEL, GRP_LINK, CHNL_LINK
 from utils import get_settings, get_size, is_subscribed, save_group_settings, temp
 from database.connections_mdb import active_connection
 import re
@@ -134,8 +134,8 @@ async def start(client, message):
                 f_caption = f"{title}"
             buttons = [
                 [
-                    InlineKeyboardButton('🧲Group🧲', url=f'https://t.me/c_i_n_i_m_a_v_i_l_l_a'),
-                    InlineKeyboardButton('⭕️channel⭕️', url='https://telegram.me/CV_Community')
+                    InlineKeyboardButton('🧲Group🧲', url=GRP_LINK),
+                    InlineKeyboardButton('⭕️channel⭕️', url=CHNL_LINK)
                 ],
                 [
                     InlineKeyboardButton('💰 Paid Promotion', url='https://t.me/CVPaid_promotion')
@@ -248,8 +248,8 @@ async def start(client, message):
         f_caption = f"{files.file_name}"
     buttons = [
                 [
-                    InlineKeyboardButton('🧲Group🧲', url=f'https://t.me/c_i_n_i_m_a_v_i_l_l_a'),
-                    InlineKeyboardButton('⭕️channel⭕️', url='https://telegram.me/CV_Community')
+                    InlineKeyboardButton('🧲Group🧲', url=GRP_LINK),
+                    InlineKeyboardButton('⭕️channel⭕️', url=CHNL_LINK)
                 ],
                 [
                     InlineKeyboardButton('💰 Paid Promotion', url='https://t.me/CVPaid_promotion')
