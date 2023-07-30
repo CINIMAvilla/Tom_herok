@@ -9,7 +9,7 @@ import pyrogram
 from database.connections_mdb import active_connection, all_connections, delete_connection, if_active, make_active, \
     make_inactive
 from info import ADMINS, AUTH_CHANNEL, AUTH_USERS, CUSTOM_FILE_CAPTION, AUTH_GROUPS, P_TTI_SHOW_OFF, IMDB, \
-    SINGLE_BUTTON, SPELL_CHECK_REPLY, IMDB_TEMPLATE, REQ_CHANNEL
+    SINGLE_BUTTON, SPELL_CHECK_REPLY, IMDB_TEMPLATE, REQ_CHANNEL, GRP_LINK, CHNL_LINK
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.handlers import CallbackQueryHandler
 from pyrogram import Client, filters
@@ -361,8 +361,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
             f_caption = f"{files.file_name}"
         buttons = [
                 [
-                    InlineKeyboardButton('🧲Group🧲', url=f'https://t.me/c_i_n_i_m_a_v_i_l_l_a'),
-                    InlineKeyboardButton('⭕️channel⭕️', url='https://telegram.me/CV_Community')
+                    InlineKeyboardButton('🧲Group🧲', url=GRP_LINK),
+                    InlineKeyboardButton('⭕️channel⭕️', url=CHNL_LINK)
                 ],
                 [
                     InlineKeyboardButton('💰 Paid Promotion', url='https://t.me/CVPaid_promotion')
@@ -415,8 +415,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
             f_caption = f"{title}"
         buttons = [
                 [
-                    InlineKeyboardButton('🧲Group🧲', url=f'https://t.me/c_i_n_i_m_a_v_i_l_l_a'),
-                    InlineKeyboardButton('⭕️channel⭕️', url='https://telegram.me/CV_Community')
+                    InlineKeyboardButton('🧲Group🧲', url=GRP_LINK),
+                    InlineKeyboardButton('⭕️channel⭕️', url=CHNL_LINK)
                 ],
                 [
                     InlineKeyboardButton('💰 Paid Promotion', url='https://t.me/CVPaid_promotion')
