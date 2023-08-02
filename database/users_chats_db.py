@@ -1,6 +1,5 @@
-# https://github.com/odysseusmax/animated-lamp/blob/master/bot/database/database.py
 import motor.motor_asyncio
-from info import DATABASE_NAME, DATABASE_URI, IMDB, IMDB_TEMPLATE, MELCOW_NEW_USERS, P_TTI_SHOW_OFF, SINGLE_BUTTON, SPELL_CHECK_REPLY, PROTECT_CONTENT
+from info import DATABASE_NAME, DATABASE_URI
 
 class Database:
     
@@ -9,6 +8,7 @@ class Database:
         self.db = self._client[database_name]
         self.col = self.db.users
         self.grp = self.db.groups
+        self.adm = self.db.admins
 
 
     def new_user(self, id, name):
@@ -101,20 +101,42 @@ class Database:
             reason="",
             )
         await self.grp.update_one({'id': int(id)}, {'$set': {'chat_status': chat_status}})
-        
+       
+    async def add_key(self):
+        k = await self.adm.find_one({'key': 'key'})
+        if not k:
+            await self.adm.insert_one({'key': 'key'})
+            
+    async def set_channel(self, id):
+        await self.adm.update_one({'key': 'key'}, {'$set': {'channel': id}})
+           
+    async def get_channel(self):
+        ch = await self.adm.find_one({'key': 'key'})
+        if ch:
+            return ch.get('channel', None)
+   
+    async def set_req(self, value):
+        await self.adm.update_one({'key': 'key'}, {'$set': {'req': value}})
+           
+    async def get_req(self):
+        ch = await self.adm.find_one({'key': 'key'})
+        req = ch.get('req', None)
+        if req == "True":
+            return True
+        else:
+            return False 
+          
     async def update_settings(self, id, settings):
         await self.grp.update_one({'id': int(id)}, {'$set': {'settings': settings}})
         
-    
+   
     async def get_settings(self, id):
         default = {
-            'button': SINGLE_BUTTON,
-            'botpm': P_TTI_SHOW_OFF,
-            'file_secure': PROTECT_CONTENT,
-            'imdb': IMDB,
-            'spell_check': SPELL_CHECK_REPLY,
-            'welcome': MELCOW_NEW_USERS,
-            'template': IMDB_TEMPLATE
+            'button': True,
+            'botpm': True,
+            'file_secure': False,
+            'spell_check': True,
+            'welcome': True
         }
         chat = await self.grp.find_one({'id':int(id)})
         if chat:
@@ -141,6 +163,7 @@ class Database:
 
     async def get_db_size(self):
         return (await self.db.command("dbstats"))['dataSize']
+
 
 
 db = Database(DATABASE_URI, DATABASE_NAME)
