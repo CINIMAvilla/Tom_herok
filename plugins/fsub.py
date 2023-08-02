@@ -1,138 +1,101 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# (c) @AlbertEinsteinTG
 
 import asyncio
-from pyrogram import Client, enums
+from Script import script 
+from pyrogram import filters, Client, enums
+from pyrogram.types import ChatJoinRequest
+from pyrogram.handlers import ChatJoinRequestHandler
 from pyrogram.errors import FloodWait, UserNotParticipant
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
-
-from database.join_reqs import JoinReqs
-from info import REQ_CHANNEL, AUTH_CHANNEL, JOIN_REQS_DB, ADMINS
-
+from database.join_reqs import req_db
+from database.users_chats_db import db
+from info import ADMINS
+from utils import temp
 from logging import getLogger
 
 logger = getLogger(__name__)
-INVITE_LINK = None
-db = JoinReqs
 
-async def ForceSub(bot: Client, update: Message, file_id: str = False, mode="checksub"):
 
-    global INVITE_LINK
-    auth = ADMINS.copy() + [1125210189]
-    if update.from_user.id in auth:
-        return True
+@Client.on_chat_join_request()
+async def join_reqs(client, m: ChatJoinRequest):
+    if m.chat.id == temp.AUTH_CHANNEL:
+        if temp.REQ_SUB:
+            id = m.from_user.id
+            await req_db.add_user(id=id)
 
-    if not AUTH_CHANNEL and not REQ_CHANNEL:
-        return True
 
+@Client.on_message(filters.command("total_req") & filters.private & filters.user(ADMINS))                
+async def total_requests(client, message):
+    if temp.REQ_SUB:
+        total = await req_db.get_all_users_count()
+        await message.reply_text(f"Total Requests: {total}")
+    else:
+        await message.reply('Req Sub Is Off')
+
+@Client.on_message(filters.command("del_req") & filters.private & filters.user(ADMINS))
+async def purge_requests(client, message):
+    if temp.REQ_SUB:
+        await req_db.delete_all_users()
+        await message.reply_text("Done ✅️")
+    else:
+        await message.reply('Req Sub Is Off')        
+
+
+
+async def ForceSub(bot: Client, event: Message, file_id: str = False, mode="checksub"):
     is_cb = False
-    if not hasattr(update, "chat"):
-        update.message.from_user = update.from_user
-        update = update.message
+    if not hasattr(event, "chat"):
+        event.message.from_user = event.from_user
+        event = event.message
         is_cb = True
 
-    # Create Invite Link if not exists
     try:
-        # Makes the bot a bit faster and also eliminates many issues realted to invite links.
-        if INVITE_LINK is None:
-            invite_link = (await bot.create_chat_invite_link(
-                chat_id=(int(AUTH_CHANNEL) if not REQ_CHANNEL and not JOIN_REQS_DB else REQ_CHANNEL),
-                creates_join_request=True if REQ_CHANNEL and JOIN_REQS_DB else False
-            )).invite_link
-            INVITE_LINK = invite_link
-            logger.info("Created Req link")
+        if temp.INVITE_LINK == None:
+            if_req = True if temp.REQ_SUB else False 
+            link = (await bot.create_chat_invite_link(chat_id=int(temp.AUTH_CHANNEL), creates_join_request=if_req)).invite_link
+            temp.INVITE_LINK = link
+            print("Created Invite Link !")
         else:
-            invite_link = INVITE_LINK
-
-    except FloodWait as e:
-        await asyncio.sleep(e.x)
-        fix_ = await ForceSub(bot, update, file_id)
-        return fix_
-
-    except Exception as err:
-        print(f"Unable to do Force Subscribe to {REQ_CHANNEL}\n\nError: {err}\n\n")
-        await update.reply(
-            text="Something went Wrong.",
-            parse_mode=enums.ParseMode.MARKDOWN,
-            disable_web_page_preview=True
-        )
+            link = temp.INVITE_LINK
+            
+    except Exception as e:
+        print(f"Unable to create Invite link !\n\nError: {e}")
         return False
-
+    
+        
     # Mian Logic
-    if REQ_CHANNEL and db().isActive():
+    if temp.REQ_SUB:
         try:
             # Check if User is Requested to Join Channel
-            user = await db().get_user(update.from_user.id)
-            if user and user["user_id"] == update.from_user.id:
+            user = await req_db.get_user(event.from_user.id)
+            if user and user["id"] == event.from_user.id:
                 return True
         except Exception as e:
             logger.exception(e, exc_info=True)
-            await update.reply(
-                text="Something went Wrong.",
-                parse_mode=enums.ParseMode.MARKDOWN,
-                disable_web_page_preview=True
-            )
+            await event.reply(text="Something went Wrong.")
             return False
 
     try:
-        if not AUTH_CHANNEL:
-            raise UserNotParticipant
-        # Check if User is Already Joined Channel
-        user = await bot.get_chat_member(
-                   chat_id=(int(AUTH_CHANNEL) if not REQ_CHANNEL and not db().isActive() else REQ_CHANNEL), 
-                   user_id=update.from_user.id
-               )
-        if user.status == "kicked":
-            await bot.send_message(
-                chat_id=update.from_user.id,
-                text="Sorry Sir, You are Banned to use me.",
-                parse_mode=enums.ParseMode.MARKDOWN,
-                disable_web_page_preview=True,
-                reply_to_message_id=update.message_id
-            )
-            return False
-
-        else:
-            return True
+        user = await bot.get_chat_member(chat_id=int(temp.AUTH_CHANNEL), user_id=event.from_user.id)
+        if user: return True
     except UserNotParticipant:
-        text="""**മൂവി ലഭിക്കാനായി തായേ കാണുന്ന "Requst to Join Channel" എന്ന ബട്ടനിൽ ക്ലിക്ക് ചെയ്‌താൽ മാത്രം മതി. എന്നിട്ട് " try Again" എന്ന് കൊടുത്താൽ നിങ്ങൾക്ക് ഫയൽ കിട്ടും.👇👇**"""
-        buttons = [
-            [
-                InlineKeyboardButton("📢 𝐉𝐨𝐢𝐧 𝐑𝐞𝐪𝐮𝐞𝐬𝐭 𝐂𝐡𝐚𝐧𝐧𝐞𝐥 📢", url=invite_link)
-            ],
-            [
-                InlineKeyboardButton("🔄 𝐓𝐫𝐲 𝐀𝐠𝐚𝐢𝐧 🔄", callback_data=f"{mode}#{file_id}")
-            ]
-        ]
-
-        if file_id is False:
-            buttons.pop()
-
+        buttons = [[            
+            InlineKeyboardButton("📢 Rᴇǫᴜᴇsᴛ Tᴏ Jᴏɪɴ", url=link)
+            ],[           
+            InlineKeyboardButton("🔄 Tʀʏ Aɢᴀɪɴ", callback_data=f"{mode}#{file_id}")
+        ]]               
+        if file_id is False: buttons.pop()
         if not is_cb:
-            await update.reply(
-                text=text,
-                quote=True,
-                reply_markup=InlineKeyboardMarkup(buttons),
-                parse_mode=enums.ParseMode.MARKDOWN,
-            )
+            await event.reply(text=script.FSUB_TXT, quote=True, reply_markup=InlineKeyboardMarkup(buttons), parse_mode=enums.ParseMode.MARKDOWN)
         return False
 
     except FloodWait as e:
-        await asyncio.sleep(e.x)
-        fix_ = await ForceSub(bot, update, file_id)
+        await asyncio.sleep(e.value)
+        fix_ = await ForceSub(bot, event, file_id)
         return fix_
 
     except Exception as err:
         print(f"Something Went Wrong! Unable to do Force Subscribe.\nError: {err}")
-        await update.reply(
-            text="Something went Wrong.",
-            parse_mode=enums.ParseMode.MARKDOWN,
-            disable_web_page_preview=True
-        )
+        await event.reply(text="Something went Wrong.")
         return False
 
 
-def set_global_invite(url: str):
-    global INVITE_LINK
-    INVITE_LINK = url

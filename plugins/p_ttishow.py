@@ -1,66 +1,110 @@
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.errors.exceptions.bad_request_400 import MessageTooLong, PeerIdInvalid
-from info import ADMINS, LOG_CHANNEL, SUPPORT_CHAT, MELCOW_NEW_USERS
+from info import ADMINS, LOG_CHANNEL, CHANNEL_LINK, GROUP_LINK
 from database.users_chats_db import db
-from database.ia_filterdb import Media
+from database.ia_filterdb import Media, db as fdb
 from utils import get_size, temp, get_settings
-from script import Script
-from pyrogram.errors import ChatAdminRequired
+from Script import script
+from pyrogram.errors import ChatAdminRequired, FloodWait 
+import os, sys, asyncio
 
-"""-----------------------------------------https://t.me/JosProjects --------------------------------------"""
 
 @Client.on_message(filters.new_chat_members & filters.group)
 async def save_group(bot, message):
     r_j_check = [u.id for u in message.new_chat_members]
     if temp.ME in r_j_check:
-        if not await db.get_chat(message.chat.id):
-            total=await bot.get_chat_members_count(message.chat.id)
+        if not await db.get_chat(message.chat.id):                        
+            total=await client.get_chat_members_count(message.chat.id)
             r_j = message.from_user.mention if message.from_user else "Anonymous" 
-            await bot.send_message(LOG_CHANNEL, Script.LOG_TEXT_G.format(message.chat.title, message.chat.id, total, r_j))       
+            try:
+                await client.send_message(LOG_CHANNEL, script.LOG_TEXT_G.format(n=message.chat.title, id=message.chat.id, tot=total, u=message.chat.username, r=r_j))
+            except FloodWait as e:
+                await asyncio.sleep(e.value)
+                await client.send_message(LOG_CHANNEL, script.LOG_TEXT_G.format(n=message.chat.title, id=message.chat.id, tot=total, u=message.chat.username, r=r_j))       
             await db.add_chat(message.chat.id, message.chat.title)
+        
         if message.chat.id in temp.BANNED_CHATS:
             # Inspired from a boat of a banana tree
-            buttons = [[
-                InlineKeyboardButton('Support', url=f'https://t.me/{SUPPORT_CHAT}')
-            ]]
             reply_markup=InlineKeyboardMarkup(buttons)
             k = await message.reply(
                 text='<b>CHAT NOT ALLOWED 🐞\n\nMy admins has restricted me from working here ! If you want to know more about it contact support..</b>',
-                reply_markup=reply_markup,
             )
-
             try:
                 await k.pin()
             except:
                 pass
             await bot.leave_chat(message.chat.id)
             return
-        buttons = [[
-            InlineKeyboardButton('help', url=f"https://t.me/{temp.U_NAME}?start=help"),
-            InlineKeyboardButton('updates', url='https://t.me/CV_Community')
-        ]]
-        reply_markup=InlineKeyboardMarkup(buttons)
+        button = InlineKeyboardMarkup([[
+            InlineKeyboardButton('ʜᴇʟᴩ', url=f'http://t.me/{temp.U_NAME}?start=help')
+            ]])
         await message.reply_text(
-            text=f"<b>Thankyou For Adding Me In {message.chat.title} ❣️\n\nIf you have any questions & doubts about using me contact support.</b>",
-            reply_markup=reply_markup)
+            text=f"<b>Thankyou For Adding Me In {message.chat.title} ❣️\n\nIf You Have Any Questions & Doubts About Using Me? Click  Help</b>",
+            reply_markup=button)
     else:
         settings = await get_settings(message.chat.id)
         if settings["welcome"]:
             for u in message.new_chat_members:
-                buttons = [[
-                InlineKeyboardButton('👉 ⚠️ Press me... 🥰 👈', url="https://t.me/CV_Community")
-            ]]
                 if (temp.MELCOW).get('welcome') is not None:
                     try:
                         await (temp.MELCOW['welcome']).delete()
                     except:
                         pass
-                temp.MELCOW['welcome'] = await message.reply_text(
-                text=f"<b>👋 Hi! {u.mention},</b> Welcome to <b>{message.chat.title}</b>\n\n<b>👇 Official Projects Channels 👇</b>",
-                disable_web_page_preview = True,
-                reply_markup=InlineKeyboardMarkup(buttons))
+                
+                temp.MELCOW['welcome'] = await message.reply(
+                    text=f"<b>Hey , {u.mention}, Welcome To  <a href=https://t.me/{message.chat.username}>{message.chat.title}</a>\nPlease Request Your Movie To Bot Is Give Your Movie 🤩</b>\n\nNB : <code>Don'a Ask Camera Prints Here</code>",                  
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton('🎬 ᴍᴀɪɴ ᴄʜᴀɴɴᴇʟ', url=CHANNEL_LINK)
+                        ],[
+                        InlineKeyboardButton('📽️ ᴍᴏᴠɪᴇ ɢʀᴏᴜᴩ', url=GROUP_LINK)
+                        ]]
+                    )
+                )
+        
 
+
+@Client.on_message(filters.command('id'))
+async def showid(client, message):
+    chat_type = message.chat.type
+    if chat_type == enums.ChatType.PRIVATE:
+        user_id = message.chat.id
+        first = message.from_user.first_name
+        last = message.from_user.last_name or ""
+        username = message.from_user.username
+        dc_id = message.from_user.dc_id or ""
+        await message.reply_text(f"<b>➲ First Name:</b> {first}\n<b>➲ Last Name:</b> {last}\n<b>➲ Username:</b> {username}\n<b>➲ Telegram ID:</b> <code>{user_id}</code>\n<b>➲ Data Centre:</b> <code>{dc_id}</code>")
+    elif chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
+        id = message.chat.id
+        un = message.chat.username
+        tt = message.chat.title 
+        await message.reply_text(f"➲ Title: {tt}\n\n➲ Chat ID: <code>{id}</code>\n➲ ChatUN: @{un}")
+        
+@Client.on_message(filters.command('stats') & filters.private)
+async def stasus_check(client, message):
+        total = await Media.count_documents()
+        fmonsize = (await fdb.command("dbstats"))['dataSize']
+        ffree = 536870912 - fmonsize
+        fmonsize = get_size(fmonsize)
+        ffree = get_size(ffree)
+        users = await db.total_users_count()
+        chats = await db.total_chat_count()
+        monsize = await db.get_db_size()
+        free = 536870912 - monsize
+        monsize = get_size(monsize)
+        free = get_size(free)
+        sts = await message.reply("ᴡᴀɪᴛ.....")
+        await sts.edit_text(
+            text=script.STATUS_TXT.format(
+                users=users,
+                chats=chats,
+                used=monsize,
+                free=free,
+                total=total,
+                fused=fmonsize,
+                ffree=ffree),
+            parse_mode=enums.ParseMode.HTML
+        )
 
 @Client.on_message(filters.command('leave') & filters.user(ADMINS))
 async def leave_a_chat(bot, message):
@@ -72,14 +116,9 @@ async def leave_a_chat(bot, message):
     except:
         chat = chat
     try:
-        buttons = [[
-            InlineKeyboardButton('Support', url=f'https://t.me/{SUPPORT_CHAT}')
-        ]]
-        reply_markup=InlineKeyboardMarkup(buttons)
         await bot.send_message(
             chat_id=chat,
             text='<b>Hello Friends, \nMy admin has told me to leave from group so i go! If you wanna add me again contact my support group.</b>',
-            reply_markup=reply_markup,
         )
 
         await bot.leave_chat(chat)
@@ -111,14 +150,10 @@ async def disable_chat(bot, message):
     temp.BANNED_CHATS.append(int(chat_))
     await message.reply('Chat Successfully Disabled')
     try:
-        buttons = [[
-            InlineKeyboardButton('Support', url=f'https://t.me/{SUPPORT_CHAT}')
-        ]]
-        reply_markup=InlineKeyboardMarkup(buttons)
         await bot.send_message(
             chat_id=chat_, 
             text=f'<b>Hello Friends, \nMy admin has told me to leave from group so i go! If you wanna add me again contact my support group.</b> \nReason : <code>{reason}</code>',
-            reply_markup=reply_markup)
+        )
         await bot.leave_chat(chat_)
     except Exception as e:
         await message.reply(f"Error - {e}")
@@ -143,22 +178,7 @@ async def re_enable_chat(bot, message):
     await message.reply("Chat Successfully re-enabled")
 
 
-@Client.on_message(filters.command('stats') & filters.incoming)
-async def get_ststs(bot, message):
-    rju = await message.reply('Fetching stats..')
-    total_users = await db.total_users_count()
-    totl_chats = await db.total_chat_count()
-    files = await Media.count_documents()
-    size = await db.get_db_size()
-    free = 536870912 - size
-    size = get_size(size)
-    free = get_size(free)
-    await rju.edit(Script.STATUS_TXT.format(files, total_users, totl_chats, size, free))
-
-
-# a function for trespassing into others groups, Inspired by a Vazha
-# Not to be used , But Just to showcase his vazhatharam.
-# @Client.on_message(filters.command('invite') & filters.user(ADMINS))
+@Client.on_message(filters.command('invite') & filters.user(ADMINS))
 async def gen_invite(bot, message):
     if len(message.command) == 1:
         return await message.reply('Give me a chat id')
@@ -175,9 +195,9 @@ async def gen_invite(bot, message):
         return await message.reply(f'Error {e}')
     await message.reply(f'Here is your Invite Link {link.invite_link}')
 
-@Client.on_message(filters.command('ban_user') & filters.user(ADMINS))
+@Client.on_message(filters.command('ban') & filters.user(ADMINS))
 async def ban_a_user(bot, message):
-    # https://t.me/Josprojects/
+    # https://t.me/GetTGLink/4185
     if len(message.command) == 1:
         return await message.reply('Give me a user id / username')
     r = message.text.split(None)
@@ -209,7 +229,7 @@ async def ban_a_user(bot, message):
 
 
     
-@Client.on_message(filters.command('unban_user') & filters.user(ADMINS))
+@Client.on_message(filters.command('unban') & filters.user(ADMINS))
 async def unban_a_user(bot, message):
     if len(message.command) == 1:
         return await message.reply('Give me a user id / username')
@@ -244,7 +264,7 @@ async def unban_a_user(bot, message):
     
 @Client.on_message(filters.command('users') & filters.user(ADMINS))
 async def list_users(bot, message):
-    # https://t.me/Josprojects/
+    # https://t.me/GetTGLink/4184
     raju = await message.reply('Getting List Of Users')
     users = await db.get_all_users()
     out = "Users Saved In DB Are:\n\n"
@@ -276,3 +296,88 @@ async def list_chats(bot, message):
         with open('chats.txt', 'w+') as outfile:
             outfile.write(out)
         await message.reply_document('chats.txt', caption="List Of Chats")
+
+
+
+
+@Client.on_message(filters.command("set_sub") & filters.user(ADMINS))
+async def set_sub(b, m):
+    await db.add_key()
+    if len(m.command) == 1:
+        return await m.reply("Send Command With Force Sub Channel Id Like /set_sub -100123456789")
+    raw_id = m.text.split(" ", 1)[1]
+    try:
+        chat = await b.get_chat(int(raw_id))
+    except ChatAdminRequired:
+        return await m.reply("Channel Parameter Invalid. Iam Not Having Full Admin Rights In Your Channel. Please Add Admin With Full Admin Permeation")
+    except PeerIdInvalid:
+        return await m.reply("Bot Is Not Added In This Channel. Please Add With Full Admin Permeation")
+    except Exception as e:
+        return await m.reply(f'Error {e}')
+   
+    try:
+        link = (await b.create_chat_invite_link(int(chat.id))).invite_link
+    except Exception as e:
+        print(e)
+        link = "None"
+    await db.set_channel(chat.id)
+    temp.AUTH_CHANNEL = chat.id
+    temp.INVITE_LINK = None
+    text = f"Success Fully Added:\n\nchat id: {chat.id}\nchat name: {chat.title}\nchat link: {link}"
+    return await m.reply(text=text, disable_web_page_preview=True)
+      
+     
+@Client.on_message(filters.command("get_sub") & filters.user(ADMINS))
+async def get_sub(b, m):
+    raw_id = await db.get_channel()
+    try:
+        chat = await b.get_chat(int(raw_id))
+    except ChatAdminRequired:
+        return await m.reply("Channel Parameter Invalid. Iam Not Having Full Admin Rights In Your Channel. Please Add Admin With Full Admin Permeation")
+    except Exception as e:
+        return await m.reply(f'Error {e}')
+        
+    try:
+        link = (await b.create_chat_invite_link(int(chat.id))).invite_link
+    except Exception as e:
+        print(e)
+        link = "None"
+    req = "True" if temp.REQ_SUB else "False"
+    text = f"Current F-Sub:\n\nchat id: {chat.id}\nchat name: {chat.title}\nchat link: [Click]({link})\nReq Sub: {req}"
+    return await m.reply(text=text, disable_web_page_preview=True)
+          
+   
+@Client.on_message(filters.command("req_sub") & filters.user(ADMINS))
+async def set_if_req(b, m):
+    if len(m.command) == 1:
+        return await m.reply('please enter command with on/off eg: /req_sub on / off')
+
+    on = ['true', 'on', 'yes', '1']
+    off = ['false', 'off', 'no', '0']
+    key = m.text.split(' ', 1)[1]
+
+    if key.lower() in on:
+        mode = "True"
+        temp.REQ_SUB = True
+    elif key.lower() in off:
+        mode = "False"
+        temp.REQ_SUB = False 
+    else:
+        return await m.reply('enter correct value\nif you need on? enter `/req_sub On or True or Yes`\nelse you need off? enter `/req_sub Off or False or No`')
+    await db.set_req(mode)
+    temp.INVITE_LINK = None
+    return await m.reply(f'request force sub is {mode}')
+        
+@Client.on_message(filters.command("restart") & filters.user(ADMINS))
+async def restarted_bot(b, m):
+    await m.reply("Bot Restarting......")
+    os.execl(sys.executable, sys.executable, *sys.argv)
+
+
+@Client.on_message(filters.command('update') & filters.user(ADMINS))
+async def update_code(b, m):
+    os.system("git pull")
+    await m.reply("Updated and Restarting..!")
+    os.execl(sys.executable, sys.executable, "bot.py")
+
+
