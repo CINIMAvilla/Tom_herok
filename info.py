@@ -4,7 +4,7 @@ from os import environ as env
 # Bot information
 API_ID = "6"
 API_HASH = "eb06d4abfb49dc3eeb1aeb98ae0f581e"
-BOT_TOKEN = "5902194103:AAGuO325ywrG2dql_02zRvetWuyTJNbbFyg"
+BOT_TOKEN = "5977742781:AAGn_3qJGvncWlRBs1Alk6jJPxQXlY9SqSo"
 
 # Bot settings
 CACHE_TIME = int(300)
